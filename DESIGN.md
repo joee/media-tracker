@@ -25,7 +25,7 @@ A Progressive Web App (PWA) that helps families manage and track children's scre
 #### FR1: Time Bank Management
 - **FR1.1**: Store available seconds for each child persistently
 - **FR1.2**: Display remaining time in human-readable format (HH:MM:SS)
-- **FR1.3**: Prevent time bank from going negative (stop at zero)
+- **FR1.3**: Allow time bank to go negative (track debt; parents can add grace time to recover)
 - **FR1.4**: Support multiple children with independent time banks
 
 #### FR2: Automatic Time Allocation
@@ -46,9 +46,11 @@ A Progressive Web App (PWA) that helps families manage and track children's scre
 - **FR4.2**: Stop an active session (end countdown)
 - **FR4.3**: Display active sessions with elapsed time
 - **FR4.4**: Decrement time bank in real-time during active sessions
-- **FR4.5**: Auto-stop session when time bank reaches zero
-- **FR4.6**: Support pause/resume functionality (optional)
-- **FR4.7**: Log all sessions with start time, end time, and duration
+- **FR4.5**: Allow sessions to continue even when time bank goes negative
+- **FR4.6**: Support editing past sessions (fix mistakes in start/stop times)
+- **FR4.7**: Running sessions continue uninterrupted across Monday allocation and other adjustments
+- **FR4.8**: Log all sessions with start time, end time, and duration
+- **FR4.9**: Only parents can start/stop sessions
 
 #### FR5: Multi-User Sync
 - **FR5.1**: Multiple devices can view the same data simultaneously
@@ -460,8 +462,8 @@ Backend scheduler (Cloud Function or CRON)
 - [ ] Edit child profiles
 - [ ] Delete child profiles
 - [ ] Support for more than 2-3 children
-- [ ] Pause/resume sessions
-- [ ] Push notifications (session ending soon)
+- [ ] Session editing UI (correct mistakes in start/stop times)
+- [ ] Push notifications (low time warnings)
 
 **Deliverables**: Full child management and session control
 
@@ -490,8 +492,8 @@ Backend scheduler (Cloud Function or CRON)
 
 ## Security Considerations
 
-1. **Authentication**: Simple family PIN or Google/Apple Sign-In
-2. **Authorization**: All family members have equal access (MVP)
+1. **Authentication**: Simple family PIN or Google/Apple Sign-In (parent access only)
+2. **Authorization**: Only parents can access the app; children do not have login access
 3. **Data Privacy**: Data stored per family, isolated from others
 4. **Input Validation**: Sanitize all user inputs
 5. **Rate Limiting**: Prevent abuse of time addition
@@ -518,8 +520,9 @@ Backend scheduler (Cloud Function or CRON)
 
 - **Charts and Statistics**: Visual trends and usage patterns
 - **Custom Reward Templates**: Pre-defined chore-to-time mappings
-- **Parent/Child Roles**: Different permissions for parents vs children
+- **Parent/Child Roles**: Different permissions for parents vs children (e.g., child login for viewing only)
 - **Multiple Languages**: i18n support
+- **Time Categories**: Separate tracking for different media types (TV, games, social media)
 - **Shared Family Calendar**: Coordinate media time with family events
 - **Screen Time Goals**: Set weekly limits per child
 - **Educational Content Bonus**: Different rates for educational vs entertainment
@@ -529,14 +532,14 @@ Backend scheduler (Cloud Function or CRON)
 - **Gamification**: Badges for good screen time habits
 - **Multi-Family**: Support for multiple households (co-parenting)
 
-## Open Questions
+## Design Decisions
 
-1. **Should sessions auto-pause after certain duration?** (e.g., require check-in every 2 hours)
-2. **What happens to running sessions at Monday 0:00?** (Continue or auto-stop?)
-3. **Should negative balances be allowed temporarily?** (Grace period)
-4. **Who can start/stop sessions?** (Parents only, or kids too?)
-5. **Should there be different time categories?** (TV, games, social media tracked separately)
-6. **Notifications?** (Push notifications when time is running low)
+1. **Session auto-pause**: No auto-pause functionality. Mistakes can be corrected by editing sessions after the fact.
+2. **Running sessions at Monday 0:00**: Sessions continue uninterrupted across weekly allocations and other time adjustments.
+3. **Negative balances**: Allowed and tracked. Parents can add grace time to bring children back to positive balance.
+4. **Session control**: Only parents can start/stop sessions and access the app. Children do not have login access.
+5. **Time categories**: Single unified time bank (no separate categories). Multi-category tracking deferred to Future Enhancements.
+6. **Notifications**: Push notifications for low time warnings included in Phase 5.
 
 ## Success Metrics
 
@@ -548,6 +551,6 @@ Backend scheduler (Cloud Function or CRON)
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-12-03
-**Status**: Initial Design
+**Status**: Design Approved
