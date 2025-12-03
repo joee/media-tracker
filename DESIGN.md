@@ -163,93 +163,182 @@ interface AppState {
 - **Build Tool**: Vite
 
 #### Backend/Sync Layer
-**Option 1: Firebase (Recommended for MVP)**
-- Firestore for real-time database
-- Firebase Authentication
-- Firebase Hosting
-- Cloud Functions for scheduled tasks (weekly allocation)
+**✓ Selected: Local-First with Server-Facilitated Sync (Option 3)**
 
-**Option 2: Self-Hosted**
-- WebSocket server (Socket.io or native WebSockets)
-- PostgreSQL or SQLite for persistence
-- Node.js/Express backend
-- CRON job or scheduler for weekly allocation
+**Core Stack:**
+- **IndexedDB**: Primary data storage (via y-indexeddb)
+- **Yjs**: CRDT library for conflict-free synchronization
+- **y-websocket**: WebSocket provider for multi-device sync
+- **Lightweight sync server**: Simple WebSocket relay (no database, no app logic)
 
-**Option 3: Local-First with Optional Sync**
-- IndexedDB for local storage
-- CRDT (e.g., Yjs or Automerge) for conflict-free sync
-- WebRTC or WebSocket for peer-to-peer or server sync
+**Why Local-First:**
+- True offline-first: App works perfectly without network
+- Data ownership: All data lives on user devices
+- Performance: Instant local reads/writes
+- Privacy: Optional sync means optional data sharing
+- Resilience: No single point of failure
+
+**Sync Server (Phase 3):**
+- Simple Node.js WebSocket server running y-websocket
+- Acts as message relay only (no persistence)
+- Deployable to Fly.io, Railway, or similar
+- Or use managed Yjs sync providers (Liveblocks, PartyKit)
+
+**Authentication (Phase 3):**
+- Family room ID/code for sync coordination
+- Optional: Simple PIN or passphrase for room access
+- Server validates room IDs but doesn't manage user accounts
+
+**Weekly Allocation (Phase 4):**
+- Client-side logic: Check on app open/resume
+- Calculate missed Mondays since last allocation
+- Apply all missed allocations as CRDT operations
+- No server-side scheduler needed
 
 ### System Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   PWA Frontend                       │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │   React UI  │  │ State Manager│  │  Service   │ │
-│  │ Components  │──│   (Zustand)  │──│   Worker   │ │
-│  └─────────────┘  └──────────────┘  └────────────┘ │
-│         │                 │                 │        │
-│         └─────────────────┼─────────────────┘        │
-│                           │                          │
-└───────────────────────────┼──────────────────────────┘
-                            │
-                   ┌────────▼────────┐
-                   │  Sync Layer     │
-                   │ (WebSocket/WS)  │
-                   └────────┬────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-┌───────▼────────┐  ┌───────▼────────┐  ┌──────▼──────┐
-│   Firestore    │  │  Auth Service  │  │   Cloud     │
-│   Database     │  │                │  │  Functions  │
-│  (Real-time)   │  │                │  │ (Scheduler) │
-└────────────────┘  └────────────────┘  └─────────────┘
+│              PWA - Parent Device A                   │
+│  ┌─────────────┐                                    │
+│  │   React UI  │  Display state, handle user input  │
+│  └──────┬──────┘                                    │
+│         │                                            │
+│  ┌──────▼──────┐                                    │
+│  │   Zustand   │  React state derived from CRDT     │
+│  │   Store     │                                    │
+│  └──────┬──────┘                                    │
+│         │                                            │
+│  ┌──────▼──────────────────────────────────┐       │
+│  │         Yjs CRDT Document                │       │
+│  │  ┌──────────┐ ┌──────────┐ ┌─────────┐ │       │
+│  │  │ Children │ │ Sessions │ │  Logs   │ │       │
+│  │  │  (Map)   │ │  (Map)   │ │ (Array) │ │       │
+│  │  └──────────┘ └──────────┘ └─────────┘ │       │
+│  └──────┬───────────────────────┬──────────┘       │
+│         │                       │                   │
+│  ┌──────▼──────┐         ┌──────▼──────┐           │
+│  │  IndexedDB  │         │ y-websocket │           │
+│  │ Persistence │         │  Provider   │           │
+│  │  (y-idb)    │         │  (Optional) │           │
+│  └─────────────┘         └──────┬──────┘           │
+│                                  │                   │
+└──────────────────────────────────┼───────────────────┘
+                                   │
+                         WebSocket │ (when online)
+                                   │
+                    ┌──────────────▼──────────────┐
+                    │  Lightweight Sync Server    │
+                    │  ┌────────────────────────┐ │
+                    │  │   y-websocket-server   │ │
+                    │  │  (Message relay only)  │ │
+                    │  └────────────────────────┘ │
+                    │  No database                │
+                    │  No app logic               │
+                    │  Just broadcasts updates    │
+                    └──────────────┬───────────────┘
+                                   │
+                         WebSocket │ (when online)
+                                   │
+┌──────────────────────────────────▼───────────────────┐
+│              PWA - Parent Device B                   │
+│  ┌─────────────┐                                    │
+│  │   React UI  │                                    │
+│  └──────┬──────┘                                    │
+│         │                                            │
+│  ┌──────▼──────┐                                    │
+│  │   Zustand   │                                    │
+│  │   Store     │                                    │
+│  └──────┬──────┘                                    │
+│         │                                            │
+│  ┌──────▼──────────────────────────────────┐       │
+│  │         Yjs CRDT Document                │       │
+│  │  ┌──────────┐ ┌──────────┐ ┌─────────┐ │       │
+│  │  │ Children │ │ Sessions │ │  Logs   │ │       │
+│  │  │  (Map)   │ │  (Map)   │ │ (Array) │ │       │
+│  │  └──────────┘ └──────────┘ └─────────┘ │       │
+│  └──────┬───────────────────────┬──────────┘       │
+│         │                       │                   │
+│  ┌──────▼──────┐         ┌──────▼──────┐           │
+│  │  IndexedDB  │         │ y-websocket │           │
+│  │ Persistence │         │  Provider   │           │
+│  │  (y-idb)    │         │  (Optional) │           │
+│  └─────────────┘         └─────────────┘           │
+│                                                      │
+└──────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
+**Key Characteristics:**
+- Each device has complete, authoritative copy of data
+- IndexedDB automatically persists all CRDT operations
+- Sync happens in background when devices are online
+- Offline changes queue locally and sync when reconnected
+- All devices converge to identical state via CRDT conflict resolution
+
+### Data Flow (Local-First Architecture)
 
 #### Adding Time
 ```
-User clicks "+15 min" button
-  → Frontend updates local state optimistically
-  → Send mutation to sync layer
-  → Sync layer persists to database
-  → Broadcast change to all connected clients
-  → Create log entry
-  → Confirm to originating client
+User clicks "+15 min" button (on Device A)
+  → Update Yjs CRDT: children.get('emma').availableSeconds += 900
+  → Yjs automatically persists to IndexedDB (instant)
+  → Zustand store updates from CRDT → React re-renders
+  → Create log entry in Yjs logs array
+  → If online: y-websocket broadcasts update to sync server
+  → Sync server relays to Device B
+  → Device B's Yjs CRDT applies update → UI updates
+  → If offline: Changes queue locally, sync when reconnected
 ```
 
 #### Starting Session
 ```
-User clicks "Start" for a child
-  → Create session record (active=true, startTime=now)
-  → Start local interval timer (updates every second)
-  → Decrement availableSeconds locally
-  → Sync state changes to backend periodically (every 5-10s)
-  → Broadcast active session to other clients
+User clicks "Start" for Emma (on Device A)
+  → Create session in CRDT: sessions.set(sessionId, { childId, startTime, isActive: true })
+  → Start local interval timer (decrements every second)
+  → Each second: Update child.availableSeconds in CRDT
+  → IndexedDB automatically persists each change
+  → Periodic sync (debounced): Broadcast accumulated changes via WebSocket
+  → Device B receives updates → Shows active session with live countdown
 ```
 
 #### Stopping Session
 ```
-User clicks "Stop"
+User clicks "Stop" (on Device A)
   → Stop local interval timer
-  → Calculate total secondsUsed
-  → Mark session as inactive
-  → Sync final state to backend
-  → Create log entry
-  → Broadcast update to all clients
+  → Update CRDT: session.isActive = false, session.endTime = now
+  → Calculate session.secondsUsed
+  → Create log entry in CRDT logs array
+  → Changes persist to IndexedDB + broadcast via WebSocket
+  → All devices update to show session complete
 ```
 
-#### Weekly Allocation
+#### Weekly Allocation (Client-Side)
 ```
-Backend scheduler (Cloud Function or CRON)
-  → Runs every Monday at 0:00 (configurable timezone)
-  → For each child: add 14,400 seconds
-  → Create log entries
-  → Broadcast updates to connected clients
-  → Update lastWeeklyAllocation timestamp
+App opens on any device
+  → Check: getLastMonday() vs localStorage.get('lastAllocation')
+  → If missed weeks detected:
+      For each missed Monday:
+        → Update CRDT: child.availableSeconds += 14400
+        → Create log entry: { type: 'weekly_allocation', ... }
+        → Persist to IndexedDB
+  → Update localStorage.set('lastAllocation', lastMonday)
+  → If online: Broadcast changes to other devices
+  → All devices converge to same state
+```
+
+#### Conflict Resolution (Concurrent Session Start)
+```
+Device A starts session (offline)
+  → sessions.set(sessionA, { childId: 'emma', ... })
+
+Device B starts session (offline, same child)
+  → sessions.set(sessionB, { childId: 'emma', ... })
+
+When devices sync:
+  → CRDT merges: Both sessions exist in sessions map
+  → App logic detects: "Multiple active sessions for Emma"
+  → Use last-write-wins register for activeSessionId per child
+  → UI shows most recent session, logs conflict for review
 ```
 
 ### Offline Behavior
@@ -433,27 +522,48 @@ Backend scheduler (Cloud Function or CRON)
 ### Phase 3: Multi-Device Sync & Activity Log
 **Goal**: Real-time sync across devices and activity history
 
-- [ ] Choose and set up backend (Firebase recommended)
-- [ ] Implement WebSocket/Firestore real-time listeners
-- [ ] Add authentication (simple PIN or Google Sign-In)
-- [ ] Conflict resolution logic
-- [ ] Optimistic UI updates
-- [ ] Queue and retry failed syncs
+- [ ] Set up y-websocket sync server (Node.js)
+  - Deploy to Fly.io or Railway
+  - Or use managed provider (Liveblocks, PartyKit)
+- [ ] Add y-websocket provider to PWA
+  - Connect to sync server with family room ID
+- [ ] Implement family room creation/joining flow
+  - Generate unique room IDs
+  - Optional: PIN protection for rooms
+- [ ] CRDT conflict resolution for active sessions
+  - Detect concurrent session starts
+  - Last-write-wins for activeSessionId per child
+- [ ] Connection status indicator
+  - Show online/offline/syncing states
 - [ ] Activity log display view
+  - Render from Yjs logs array
+  - Filter by child, date range
 - [ ] Activity log export (CSV/JSON)
+  - Export CRDT state to standard formats
 
 **Deliverables**: Multi-device real-time synchronization with activity history
 
-### Phase 4: Automated Weekly Allocation
-**Goal**: Automatic time addition every Monday
+### Phase 4: Client-Side Weekly Allocation
+**Goal**: Automatic time addition every Monday (client-side)
 
-- [ ] Backend scheduler setup (Cloud Functions or CRON)
-- [ ] Implement weekly allocation logic
+- [ ] Implement "check on app open" logic
+  - Compare current date vs last allocation timestamp
+  - Detect missed Mondays (device offline for weeks)
+- [ ] Apply missed allocations retroactively
+  - Create CRDT operations for each missed week
+  - Generate proper log entries with historical dates
 - [ ] Timezone handling
-- [ ] Notification system (optional)
-- [ ] Handle edge cases (missed weeks, timezone changes)
+  - Use device's local timezone for Monday 0:00
+  - Or allow user to configure timezone in settings
+- [ ] Background sync consideration
+  - Service worker can trigger check on periodic sync
+  - Fallback: Check on every app open
+- [ ] Handle edge cases
+  - Multiple devices checking simultaneously (CRDT handles this)
+  - Clock changes/timezone changes
+  - Initial setup (no previous allocation date)
 
-**Deliverables**: Fully automated weekly time allocation
+**Deliverables**: Client-side weekly time allocation with missed-week catchup
 
 ### Phase 5: Child Management & Admin Features
 **Goal**: User-friendly child management and additional admin capabilities
@@ -551,6 +661,6 @@ Backend scheduler (Cloud Function or CRON)
 
 ---
 
-**Document Version**: 1.2
+**Document Version**: 1.3
 **Last Updated**: 2025-12-03
-**Status**: Design Approved
+**Status**: Design Approved - Local-First Architecture Selected
