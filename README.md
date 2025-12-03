@@ -86,12 +86,15 @@ media-tracker/
 │   └── index.css         # Global styles
 ├── server/
 │   └── sync-server.mjs   # WebSocket sync server
+├── nixos/
+│   └── sync-server-service.nix  # NixOS systemd service
 ├── scripts/
 │   ├── generate-icons.mjs
 │   ├── integration-test.mjs
 │   └── validate.mjs
 ├── public/               # Static assets
 ├── DESIGN.md            # Comprehensive design document
+├── DEPLOYMENT.md        # Deployment guide (Cloudflare + NixOS)
 └── package.json
 ```
 
@@ -181,6 +184,7 @@ Deploy the `dist/` folder to any static hosting:
 
 Deploy `server/sync-server.mjs` to:
 
+- **Self-hosted NixOS**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete guide
 - **Fly.io**: See [DESIGN.md](./DESIGN.md#production-deployment) for instructions
 - **Railway**: Connect repo, start command `node server/sync-server.mjs`
 - **Managed Providers**: Use [Liveblocks](https://liveblocks.io/) or [PartyKit](https://www.partykit.io/)
@@ -213,6 +217,13 @@ Sync settings are stored in localStorage:
 - `sync-enabled`: Enable/disable sync (`"true"` or `"false"`)
 - `sync-url`: WebSocket server URL (default: `ws://localhost:1234`)
 - `sync-room`: Family room ID for sync group
+
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment instructions:
+- Cloudflare Pages (frontend)
+- Self-hosted NixOS (sync server)
+- SSL configuration with Caddy or nginx
 
 ## Contributing
 
