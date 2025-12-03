@@ -11,18 +11,30 @@ pkgs.mkShell {
     echo "Node version: $(node --version)"
     echo "npm version: $(npm --version)"
     echo ""
-    echo "Available commands:"
-    echo "  npm install  - Install dependencies"
-    echo "  npm run dev  - Start development server"
-    echo "  npm run build - Build for production"
-    echo ""
 
-    # Add node_modules/.bin to PATH so npx and local binaries work
+    # Add node_modules/.bin to PATH so local binaries work
     export PATH="$PWD/node_modules/.bin:$PATH"
 
     # Check if node_modules exists
     if [ ! -d "node_modules" ]; then
-      echo "⚠️  node_modules not found. Run 'npm install' first."
+      echo "⚠️  Dependencies not installed."
+      echo "Run: npm install"
+      echo ""
+    else
+      echo "✅ Dependencies installed"
+      echo ""
+      echo "Available commands:"
+      echo "  npm run dev    - Start development server (http://localhost:3000)"
+      echo "  npm run build  - Build for production"
+      echo "  vite           - Run vite directly (now in PATH)"
+      echo ""
+
+      # Verify vite is accessible
+      if command -v vite &> /dev/null; then
+        echo "✅ vite is available in PATH"
+      else
+        echo "⚠️  vite not found. Try running 'npm install' again."
+      fi
       echo ""
     fi
   '';
