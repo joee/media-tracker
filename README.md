@@ -1,9 +1,10 @@
-# Kids Media Time Tracker - Phase 1 MVP
+# Kids Media Time Tracker - PWA
 
 A Progressive Web App (PWA) for managing children's screen time with a local-first architecture using Yjs CRDTs.
 
-## ✨ Features (Phase 1)
+## ✨ Features
 
+### Phase 1: Core Functionality
 - ✅ **Time Bank Management**: Track available screen time for each child (seconds)
 - ✅ **Real-time Sessions**: Start/stop media usage sessions with live countdown
 - ✅ **Manual Time Addition**: Add time rewards with quick buttons (15/30/45/60 min)
@@ -13,13 +14,21 @@ A Progressive Web App (PWA) for managing children's screen time with a local-fir
 - ✅ **Local Persistence**: All data stored in IndexedDB via Yjs
 - ✅ **Responsive UI**: Works on mobile and desktop
 
+### Phase 2: PWA Capabilities
+- ✅ **Installable**: Add to home screen on mobile/desktop
+- ✅ **Service Worker**: Offline caching with Workbox
+- ✅ **App Icons**: Multiple sizes for all devices
+- ✅ **Install Prompt**: Smart install banner
+- ✅ **Automatic Dark Mode**: System preference detection
+
 ## 🏗️ Architecture
 
 ### Local-First Stack
 - **Frontend**: React 19 + TypeScript + Vite
+- **PWA**: vite-plugin-pwa with Workbox
 - **State**: Zustand store synced with Yjs CRDT
 - **Persistence**: IndexedDB (via y-indexeddb)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
 - **CRDT**: Yjs for conflict-free data structures
 
 ### Data Flow
@@ -49,11 +58,42 @@ npm run dev
 # Build for production
 npm run build
 
-# Preview production build
+# Preview production build (with PWA features)
 npm run preview
+
+# Regenerate PWA icons
+npm run icons
+
+# Run validation tests
+npm run validate
+
+# Run integration tests
+npm test
 ```
 
 The app will be available at `http://localhost:3000`
+
+## 📱 PWA Installation
+
+### Installing on Mobile (iOS/Android)
+1. Open the app in your mobile browser
+2. Look for the install prompt at the bottom of the screen
+3. Tap **Install** to add to home screen
+4. Alternatively:
+   - **iOS Safari**: Tap Share → Add to Home Screen
+   - **Android Chrome**: Tap Menu (⋮) → Install app
+
+### Installing on Desktop
+1. Open the app in Chrome, Edge, or another PWA-compatible browser
+2. Look for the install icon in the address bar
+3. Click to install as a standalone app
+4. Or: Menu → Install [App Name]
+
+### PWA Features
+- **Offline Access**: Works without internet after first load
+- **Fast Loading**: Service worker caches all assets
+- **Native Feel**: Runs in its own window
+- **Auto Updates**: Service worker updates in background
 
 ## 📊 Hardcoded Test Data
 

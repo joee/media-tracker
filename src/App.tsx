@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from './store/useStore';
 import ChildCard from './components/ChildCard';
 import ActivityLog from './components/ActivityLog';
+import InstallPrompt from './components/InstallPrompt';
 
 export default function App() {
   const {
@@ -57,6 +58,8 @@ export default function App() {
           <ActivityLog />
         </div>
       </main>
+
+      <InstallPrompt />
     </div>
   );
 }

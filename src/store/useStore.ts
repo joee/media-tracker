@@ -1,7 +1,6 @@
 // Zustand Store with Yjs CRDT Integration
 import { create } from 'zustand';
 import {
-  ydoc,
   yChildren,
   ySessions,
   yLogs,
@@ -13,7 +12,7 @@ import type { Child, Session, LogEntry, AppState } from '../types';
 
 interface StoreState extends AppState {
   isLoading: boolean;
-  activeIntervals: Map<string, NodeJS.Timeout>;
+  activeIntervals: Map<string, number>;
 
   // Actions
   initialize: () => Promise<void>;

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#3b82f6" rx="64"/>
+
+  <!-- Clock/Timer Icon -->
+  <circle cx="256" cy="256" r="160" fill="#fff" opacity="0.2"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#fff" stroke-width="16"/>
+
+  <!-- Clock hands -->
+  <line x1="256" y1="256" x2="256" y2="150" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="320" y2="256" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Play/Pause symbol overlay -->
+  <path d="M 200 350 L 260 320 L 260 390 Z" fill="#60a5fa"/>
+  <rect x="280" y="320" width="15" height="70" fill="#60a5fa"/>
+  <rect x="305" y="320" width="15" height="70" fill="#60a5fa"/>
+
+  <!-- Center dot -->
+  <circle cx="256" cy="256" r="8" fill="#fff"/>
+</svg>

@@ -154,6 +154,40 @@ if (existsSync(join(rootDir, 'node_modules'))) {
 }
 console.log();
 
+// Check PWA assets
+console.log('📱 Checking PWA Assets:');
+const pwaAssets = [
+  'public/icon.svg',
+  'public/pwa-192x192.png',
+  'public/pwa-512x512.png',
+  'public/apple-touch-icon.png',
+  'public/favicon.ico',
+];
+
+pwaAssets.forEach((asset) => {
+  if (existsSync(join(rootDir, asset))) {
+    success(`${asset} exists`);
+  } else {
+    warning(`${asset} not found`);
+    if (asset.includes('.png') || asset.includes('.ico')) {
+      info('Run: node scripts/generate-icons.mjs');
+    }
+  }
+});
+
+// Check Vite PWA plugin
+const viteConfigPath = join(rootDir, 'vite.config.ts');
+if (existsSync(viteConfigPath)) {
+  const viteConfig = readFileSync(viteConfigPath, 'utf8');
+  if (viteConfig.includes('vite-plugin-pwa') || viteConfig.includes('VitePWA')) {
+    success('Vite PWA plugin configured');
+  } else {
+    warning('Vite PWA plugin not found in vite.config.ts');
+  }
+}
+
+console.log();
+
 // Summary
 console.log('━'.repeat(60));
 if (hasErrors) {
