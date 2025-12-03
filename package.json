@@ -9,7 +9,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "validate": "node scripts/validate.mjs",
-    "test": "npm run validate"
+    "test:integration": "node scripts/integration-test.mjs",
+    "test": "npm run validate && npm run test:integration"
   },
   "repository": {
     "type": "git",
