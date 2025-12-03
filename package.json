@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "validate": "node scripts/validate.mjs",
+    "test": "npm run validate"
   },
   "repository": {
     "type": "git",
@@ -18,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
     "@vitejs/plugin-react": "^5.1.1",
     "lib0": "^0.2.114",
     "react": "^19.2.0",
