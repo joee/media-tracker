@@ -130,19 +130,11 @@ interface LogEntry {
   id: string;                    // UUID
   childId: string;               // Reference to Child
   timestamp: number;             // Unix timestamp
-  type: LogType;                 // Event type
+  type: string;                  // Event type (free-form: 'weekly_allocation', 'manual_addition', 'session_start', 'session_end', etc.)
   deltaSeconds: number;          // Change in available time (+ or -)
   previousBalance: number;       // Balance before change
   newBalance: number;            // Balance after change
   metadata: Record<string, any>; // Additional context
-}
-
-enum LogType {
-  WEEKLY_ALLOCATION = 'weekly_allocation',
-  MANUAL_ADDITION = 'manual_addition',
-  SESSION_START = 'session_start',
-  SESSION_END = 'session_end',
-  MANUAL_ADJUSTMENT = 'manual_adjustment'
 }
 ```
 
@@ -282,8 +274,8 @@ Backend scheduler (Cloud Function or CRON)
 **Resolution**:
 1. Detect concurrent session start attempts
 2. First write wins (based on server timestamp)
-3. Second attempt is rejected with error message
-4. Rejected client shows "Already in session" notification
+3. Second attempt is rejected
+4. Rejected client shows the last log entry for that child (indicating session already started)
 
 ## User Interface
 
@@ -414,7 +406,7 @@ Backend scheduler (Cloud Function or CRON)
 
 - [ ] Set up React + TypeScript + Vite project
 - [ ] Implement local state management (Zustand)
-- [ ] Create Child profiles (add, edit, delete)
+- [ ] Hardcoded child profiles (2-3 children for testing)
 - [ ] Time bank display and manual time addition
 - [ ] Start/Stop session functionality
 - [ ] Basic activity logging
@@ -432,11 +424,12 @@ Backend scheduler (Cloud Function or CRON)
 - [ ] Add install prompt
 - [ ] Test offline functionality
 - [ ] Add app icons and splash screens
+- [ ] Dark mode
 
 **Deliverables**: Installable PWA that works offline
 
-### Phase 3: Multi-Device Sync
-**Goal**: Real-time sync across devices
+### Phase 3: Multi-Device Sync & Activity Log
+**Goal**: Real-time sync across devices and activity history
 
 - [ ] Choose and set up backend (Firebase recommended)
 - [ ] Implement WebSocket/Firestore real-time listeners
@@ -444,8 +437,10 @@ Backend scheduler (Cloud Function or CRON)
 - [ ] Conflict resolution logic
 - [ ] Optimistic UI updates
 - [ ] Queue and retry failed syncs
+- [ ] Activity log display view
+- [ ] Activity log export (CSV/JSON)
 
-**Deliverables**: Multi-device real-time synchronization
+**Deliverables**: Multi-device real-time synchronization with activity history
 
 ### Phase 4: Automated Weekly Allocation
 **Goal**: Automatic time addition every Monday
@@ -458,19 +453,17 @@ Backend scheduler (Cloud Function or CRON)
 
 **Deliverables**: Fully automated weekly time allocation
 
-### Phase 5: Polish & Advanced Features
-**Goal**: Enhanced UX and optional features
+### Phase 5: Child Management & Admin Features
+**Goal**: User-friendly child management and additional admin capabilities
 
-- [ ] Activity log export (CSV/JSON)
-- [ ] Charts and statistics
+- [ ] Add child profiles (dynamic creation)
+- [ ] Edit child profiles
+- [ ] Delete child profiles
+- [ ] Support for more than 2-3 children
 - [ ] Pause/resume sessions
-- [ ] Custom reward templates
 - [ ] Push notifications (session ending soon)
-- [ ] Parent/child roles and permissions
-- [ ] Dark mode
-- [ ] Multiple languages (i18n)
 
-**Deliverables**: Production-ready app with advanced features
+**Deliverables**: Full child management and session control
 
 ## Testing Strategy
 
@@ -520,10 +513,13 @@ Backend scheduler (Cloud Function or CRON)
 3. **Color Contrast**: WCAG AA compliance
 4. **Focus Indicators**: Clear visual focus states
 5. **Touch Targets**: Minimum 44x44px for mobile
-6. **Animations**: Respect prefers-reduced-motion
 
 ## Future Enhancements
 
+- **Charts and Statistics**: Visual trends and usage patterns
+- **Custom Reward Templates**: Pre-defined chore-to-time mappings
+- **Parent/Child Roles**: Different permissions for parents vs children
+- **Multiple Languages**: i18n support
 - **Shared Family Calendar**: Coordinate media time with family events
 - **Screen Time Goals**: Set weekly limits per child
 - **Educational Content Bonus**: Different rates for educational vs entertainment
@@ -552,6 +548,6 @@ Backend scheduler (Cloud Function or CRON)
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: 2025-12-03
 **Status**: Initial Design
