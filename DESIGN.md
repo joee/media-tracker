@@ -661,6 +661,245 @@ When devices sync:
 
 ---
 
-**Document Version**: 1.3
+## Multi-Device Sync Setup & Usage
+
+### Overview
+
+The app uses Yjs CRDT with y-websocket for real-time multi-device synchronization. Each device maintains a complete local copy of data in IndexedDB and optionally connects to a WebSocket relay server to sync with other devices.
+
+### Running the Sync Server
+
+The sync server is a lightweight WebSocket relay that broadcasts Yjs updates between devices. It requires no database and stores no application data.
+
+#### Local Development
+
+```bash
+# Start the sync server (default port 1234)
+npm run server
+
+# Or with custom port
+PORT=8080 npm run server
+```
+
+The server will start on `ws://0.0.0.0:1234` by default.
+
+#### Production Deployment
+
+**Option 1: Fly.io**
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Create fly.toml
+cat > fly.toml << EOF
+app = "kids-media-tracker-sync"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[services]]
+  internal_port = 1234
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+EOF
+
+# Create Dockerfile
+cat > Dockerfile << EOF
+FROM node:20-slim
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --production
+COPY server ./server
+CMD ["node", "server/sync-server.mjs"]
+EOF
+
+# Deploy
+fly launch
+fly deploy
+```
+
+**Option 2: Railway**
+1. Push code to GitHub
+2. Connect Railway to your repo
+3. Set build command: `npm ci`
+4. Set start command: `node server/sync-server.mjs`
+5. Railway auto-detects Node.js and deploys
+
+**Option 3: Managed Yjs Providers**
+- [Liveblocks](https://liveblocks.io/): Managed Yjs sync with built-in auth
+- [PartyKit](https://www.partykit.io/): Serverless Yjs sync platform
+
+### Using Multi-Device Sync
+
+#### Enabling Sync
+
+1. **Click the sync status indicator** in the app header (top right)
+2. **Toggle "Enable Sync"** to ON
+3. **Configure settings**:
+   - **Room ID**: Unique identifier for your family (auto-generated)
+   - **Server URL**: WebSocket server address (e.g., `ws://localhost:1234` for local or `wss://your-app.fly.dev` for production)
+4. **Click "Apply Changes"**
+
+#### Sharing with Family Members
+
+To sync across devices:
+
+1. **On Device A (first device)**:
+   - Enable sync
+   - Copy the Room ID (click the 📋 copy button)
+
+2. **On Device B (second device)**:
+   - Enable sync
+   - Paste the Room ID from Device A
+   - Use the same Server URL
+   - Click "Apply Changes"
+
+Both devices will now sync in real-time!
+
+#### Connection Status
+
+The sync indicator shows:
+- 🟢 **Synced**: Connected and up-to-date
+- 🟡 **Connecting...**: Attempting to connect
+- 🔴 **Disconnected**: Not connected (check server/network)
+- ⭕ **Sync Off**: Sync disabled (local-only mode)
+
+#### Troubleshooting Sync
+
+**Problem**: Connection shows "Disconnected"
+- **Solution**: Verify sync server is running and accessible
+- Check server URL format: `ws://host:port` (local) or `wss://host` (production with SSL)
+- Check firewall/network settings
+
+**Problem**: Devices not syncing
+- **Solution**: Ensure both devices use the same Room ID
+- Verify both are connected (green status)
+- Check browser console for errors
+
+**Problem**: Slow sync or lag
+- **Solution**: Check network connection quality
+- Verify sync server has sufficient resources
+- Consider deploying server closer to your location
+
+### Exporting Activity Logs
+
+Activity logs can be exported for analysis or record-keeping:
+
+1. **Scroll to Activity Log** section on the main dashboard
+2. **Click export button**:
+   - **📊 CSV**: Spreadsheet format (Excel, Google Sheets)
+   - **📦 JSON**: Structured data format (programming, backup)
+3. **File downloads** with name: `media-tracker-activity-YYYY-MM-DD.[csv|json]`
+
+**CSV Format:**
+```csv
+Timestamp,Date,Child,Type,Delta (seconds),Previous Balance,New Balance,Reason
+1701619200000,"12/3/2025, 3:00:00 PM",Emma,manual_addition,900,7200,8100,"Cleaned bedroom"
+```
+
+**JSON Format:**
+```json
+[
+  {
+    "id": "abc123",
+    "timestamp": 1701619200000,
+    "date": "12/3/2025, 3:00:00 PM",
+    "childId": "emma",
+    "childName": "Emma",
+    "type": "manual_addition",
+    "deltaSeconds": 900,
+    "previousBalance": 7200,
+    "newBalance": 8100,
+    "metadata": {
+      "reason": "Cleaned bedroom"
+    }
+  }
+]
+```
+
+### Local Storage Keys
+
+The app uses localStorage for sync configuration:
+
+- `sync-enabled`: `"true"` or `"false"`
+- `sync-url`: WebSocket server URL (default: `ws://localhost:1234`)
+- `sync-room`: Room ID for family sync group
+
+These can be manually edited in browser DevTools if needed.
+
+### Security Notes
+
+- **Room IDs are not encrypted**: Anyone with your Room ID can join your sync session
+- **For production**: Consider adding PIN/password protection (future enhancement)
+- **Data transmission**: Use WSS (WebSocket Secure) for production deployments
+- **Local data**: All data stored in browser IndexedDB (not sent to server permanently)
+- **Server role**: Server only relays messages, stores nothing
+
+### Architecture Details
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Browser A                                            │
+│  ┌────────────┐                                     │
+│  │ IndexedDB  │◄──── Primary Storage (Persistent)   │
+│  │ (y-idb)    │                                     │
+│  └──────┬─────┘                                     │
+│         │                                            │
+│    ┌────▼────┐                                      │
+│    │  Yjs    │◄──── CRDT Document (In Memory)      │
+│    │  CRDT   │                                      │
+│    └────┬────┘                                      │
+│         │                                            │
+│  ┌──────▼──────┐                                    │
+│  │ y-websocket │◄──── Sync Provider (Optional)     │
+│  └──────┬──────┘                                    │
+│         │                                            │
+└─────────┼────────────────────────────────────────────┘
+          │
+          │ WebSocket (when online)
+          │
+    ┌─────▼─────┐
+    │   Sync    │◄──── Relay Server (Stateless)
+    │  Server   │      - No database
+    └─────┬─────┘      - Broadcasts only
+          │
+          │ WebSocket (when online)
+          │
+┌─────────▼────────────────────────────────────────────┐
+│ Browser B                                            │
+│  ┌────────────┐                                     │
+│  │ IndexedDB  │◄──── Primary Storage (Persistent)   │
+│  │ (y-idb)    │                                     │
+│  └──────┬─────┘                                     │
+│         │                                            │
+│    ┌────▼────┐                                      │
+│    │  Yjs    │◄──── CRDT Document (In Memory)      │
+│    │  CRDT   │                                      │
+│    └────┬────┘                                      │
+│         │                                            │
+│  ┌──────▼──────┐                                    │
+│  │ y-websocket │◄──── Sync Provider (Optional)     │
+│  └─────────────┘                                    │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+- Each browser has complete, independent data in IndexedDB
+- App works fully offline (sync disabled or disconnected)
+- Sync server facilitates real-time updates but is not required
+- All devices converge to identical state via CRDT merging
+- No data loss even with network interruptions
+
+---
+
+**Document Version**: 1.4
 **Last Updated**: 2025-12-03
-**Status**: Design Approved - Local-First Architecture Selected
+**Status**: Phase 3 Complete - Multi-Device Sync Operational

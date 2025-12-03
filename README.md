@@ -1,236 +1,227 @@
-# Kids Media Time Tracker - PWA
+# Kids Media Time Tracker
 
-A Progressive Web App (PWA) for managing children's screen time with a local-first architecture using Yjs CRDTs.
+A Progressive Web App (PWA) that helps families manage and track children's screen time with real-time multi-device synchronization.
 
-## ✨ Features
+## Features
 
-### Phase 1: Core Functionality
-- ✅ **Time Bank Management**: Track available screen time for each child (seconds)
-- ✅ **Real-time Sessions**: Start/stop media usage sessions with live countdown
-- ✅ **Manual Time Addition**: Add time rewards with quick buttons (15/30/45/60 min)
-- ✅ **Activity Logging**: Complete audit trail of all time changes
-- ✅ **Negative Balances**: Track time debt when children go over their limit
-- ✅ **Offline-First**: Fully functional without internet connection
-- ✅ **Local Persistence**: All data stored in IndexedDB via Yjs
-- ✅ **Responsive UI**: Works on mobile and desktop
+- **Time Bank Management**: Track available media time for each child
+- **Session Tracking**: Start/stop media usage sessions with real-time countdown
+- **Multi-Device Sync**: Real-time synchronization across devices using Yjs CRDT
+- **Activity Logging**: Complete history of time additions and sessions
+- **Export Logs**: Export activity logs to CSV or JSON
+- **Offline-First**: Works completely offline with local IndexedDB storage
+- **PWA**: Installable on mobile and desktop devices
+- **Dark Mode**: Automatic system theme detection
 
-### Phase 2: PWA Capabilities
-- ✅ **Installable**: Add to home screen on mobile/desktop
-- ✅ **Service Worker**: Offline caching with Workbox
-- ✅ **App Icons**: Multiple sizes for all devices
-- ✅ **Install Prompt**: Smart install banner
-- ✅ **Automatic Dark Mode**: System preference detection
-
-## 🏗️ Architecture
-
-### Local-First Stack
-- **Frontend**: React 19 + TypeScript + Vite
-- **PWA**: vite-plugin-pwa with Workbox
-- **State**: Zustand store synced with Yjs CRDT
-- **Persistence**: IndexedDB (via y-indexeddb)
-- **Styling**: Tailwind CSS v4
-- **CRDT**: Yjs for conflict-free data structures
-
-### Data Flow
-```
-User Action → Yjs CRDT → IndexedDB (auto-persist)
-                 ↓
-            Zustand Store
-                 ↓
-           React Re-render
-```
-
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
+
+- Node.js 20+ and npm
+- Modern web browser (Chrome, Firefox, Safari, Edge)
 
 ### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd media-tracker
+
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build (with PWA features)
-npm run preview
-
-# Regenerate PWA icons
+# Generate PWA icons
 npm run icons
 
-# Run validation tests
-npm run validate
-
-# Run integration tests
-npm test
+# Start development server
+npm run dev
 ```
 
-The app will be available at `http://localhost:3000`
+Visit http://localhost:3000
 
-## 📱 PWA Installation
+### Multi-Device Sync (Optional)
 
-### Installing on Mobile (iOS/Android)
-1. Open the app in your mobile browser
-2. Look for the install prompt at the bottom of the screen
-3. Tap **Install** to add to home screen
-4. Alternatively:
-   - **iOS Safari**: Tap Share → Add to Home Screen
-   - **Android Chrome**: Tap Menu (⋮) → Install app
+To enable real-time sync across devices:
 
-### Installing on Desktop
-1. Open the app in Chrome, Edge, or another PWA-compatible browser
-2. Look for the install icon in the address bar
-3. Click to install as a standalone app
-4. Or: Menu → Install [App Name]
+```bash
+# In a separate terminal, start the sync server
+npm run server
+```
 
-### PWA Features
-- **Offline Access**: Works without internet after first load
-- **Fast Loading**: Service worker caches all assets
-- **Native Feel**: Runs in its own window
-- **Auto Updates**: Service worker updates in background
+Then in the app:
+1. Click the sync status indicator (top right)
+2. Toggle "Enable Sync" to ON
+3. Copy the Room ID
+4. Share the Room ID with other devices to sync
 
-## 📊 Hardcoded Test Data
+### Building for Production
 
-Phase 1 includes 3 hardcoded children:
-- **Emma**: 2 hours (7200 seconds)
-- **Noah**: 1.5 hours (5400 seconds)
-- **Liam**: 1 hour (3600 seconds)
+```bash
+# Build the app
+npm run build
 
-## 🎯 Usage
+# Preview production build
+npm run preview
+```
 
-### Starting a Session
-1. Click the **▶ Start** button on a child's card
-2. The timer begins counting down every second
-3. Time bank balance decreases in real-time
-4. Session appears in activity log
-
-### Stopping a Session
-1. Click the **⏹ Stop** button on the active session
-2. Final time used is calculated
-3. Session end logged to activity log
-
-### Adding Time
-1. Click the **+ Add Time** button
-2. Choose a quick add amount (15/30/45/60 min)
-3. Optionally add a reason (e.g., "Cleaned bedroom")
-4. Time is immediately added to the child's bank
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 media-tracker/
 ├── src/
-│   ├── components/
-│   │   ├── ActivityLog.tsx      # Activity log display
-│   │   ├── AddTimeModal.tsx     # Time addition modal
-│   │   └── ChildCard.tsx        # Child time bank card
+│   ├── components/       # React components
+│   │   ├── ActivityLog.tsx
+│   │   ├── AddTimeModal.tsx
+│   │   ├── ChildCard.tsx
+│   │   ├── InstallPrompt.tsx
+│   │   └── SyncStatus.tsx
 │   ├── lib/
-│   │   └── yjs.ts               # Yjs CRDT setup & utilities
+│   │   └── yjs.ts        # Yjs CRDT setup and utilities
 │   ├── store/
-│   │   └── useStore.ts          # Zustand store with CRDT integration
+│   │   └── useStore.ts   # Zustand state management
 │   ├── types/
-│   │   └── index.ts             # TypeScript interfaces
-│   ├── App.tsx                  # Main app component
-│   ├── main.tsx                 # React entry point
-│   └── index.css                # Tailwind CSS imports
-├── index.html                   # HTML entry point
-├── vite.config.ts               # Vite configuration
-├── tsconfig.json                # TypeScript configuration
-├── tailwind.config.js           # Tailwind CSS configuration
-├── package.json                 # Dependencies & scripts
-└── DESIGN.md                    # Full design document
+│   │   └── index.ts      # TypeScript interfaces
+│   ├── App.tsx           # Main app component
+│   ├── main.tsx          # App entry point
+│   └── index.css         # Global styles
+├── server/
+│   └── sync-server.mjs   # WebSocket sync server
+├── scripts/
+│   ├── generate-icons.mjs
+│   ├── integration-test.mjs
+│   └── validate.mjs
+├── public/               # Static assets
+├── DESIGN.md            # Comprehensive design document
+└── package.json
 ```
 
-## 🔧 Key Technologies
+## NPM Scripts
 
-- **React 19**: Latest React with concurrent features
-- **TypeScript**: Type-safe development
-- **Vite**: Lightning-fast build tool
-- **Yjs**: CRDT library for conflict-free sync
-- **y-indexeddb**: Automatic IndexedDB persistence
-- **Zustand**: Lightweight state management
-- **Tailwind CSS**: Utility-first styling
-- **Dark Mode**: Automatic system preference detection
+- `npm run dev` - Start Vite development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run server` - Start WebSocket sync server
+- `npm run icons` - Generate PWA icons from SVG
+- `npm run validate` - Validate project configuration
+- `npm run test:integration` - Run integration tests
+- `npm run test` - Run all tests
 
-## 📝 Data Models
+## Technology Stack
 
-### Child
-```typescript
-interface Child {
-  id: string;
-  name: string;
-  availableSeconds: number;  // Can be negative
-  createdAt: number;
-  updatedAt: number;
-}
+### Frontend
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS v4** - Styling
+- **Zustand** - State management
+- **Yjs** - CRDT for data synchronization
+- **y-indexeddb** - Local persistence
+- **y-websocket** - Multi-device sync
+- **vite-plugin-pwa** - PWA capabilities
+
+### Backend/Sync
+- **Node.js** - WebSocket server runtime
+- **ws** - WebSocket implementation
+- **y-protocols** - Yjs sync protocols
+
+## Development
+
+### NixOS Users
+
+A Nix shell environment is provided:
+
+```bash
+nix-shell
+# or
+nix-shell default.nix
 ```
 
-### Session
-```typescript
-interface Session {
-  id: string;
-  childId: string;
-  startTime: number;
-  endTime: number | null;
-  secondsUsed: number;
-  isActive: boolean;
-}
+### Running Tests
+
+```bash
+# Validate configuration
+npm run validate
+
+# Run integration tests
+npm run test:integration
+
+# Run all tests
+npm run test
 ```
 
-### LogEntry
-```typescript
-interface LogEntry {
-  id: string;
-  childId: string;
-  timestamp: number;
-  type: string;  // 'manual_addition', 'session_start', 'session_end', etc.
-  deltaSeconds: number;
-  previousBalance: number;
-  newBalance: number;
-  metadata: Record<string, any>;
-}
-```
+## Architecture
 
-## 🎨 UI Features
+The app uses a **local-first architecture**:
 
-- **Responsive Grid**: 1 column mobile, 2 columns tablet, 3 columns desktop
-- **Dark Mode**: Automatic based on system preference
-- **Live Updates**: Real-time countdown during active sessions
-- **Visual Indicators**:
-  - Green time = positive balance
-  - Red time = negative balance (debt)
-  - Pulsing "ACTIVE" badge for running sessions
-  - Warning icon for overdrawn accounts
+1. **IndexedDB** stores all data locally on each device
+2. **Yjs CRDT** provides conflict-free data structures
+3. **y-websocket** (optional) enables real-time multi-device sync
+4. **Lightweight sync server** acts as a message relay only
 
-## ⚡ Performance
+This means:
+- App works fully offline
+- Data lives on user devices
+- Sync is optional and real-time
+- No single point of failure
 
-- **Instant Persistence**: All changes auto-saved to IndexedDB
-- **No Network Dependency**: Fully functional offline
-- **Efficient Updates**: Only re-renders affected components
-- **Debounced Sync**: Ready for Phase 3 multi-device sync
+See [DESIGN.md](./DESIGN.md) for comprehensive architecture documentation.
 
-## 🚧 Coming in Future Phases
+## Deployment
 
-- **Phase 2**: PWA manifest, service worker, dark mode toggle, app icons
-- **Phase 3**: Multi-device sync via y-websocket, activity log export
-- **Phase 4**: Client-side weekly allocation (Monday 0:00)
-- **Phase 5**: Dynamic child management, session editing, push notifications
+### Frontend (PWA)
 
-## 📄 License
+Deploy the `dist/` folder to any static hosting:
+
+- **Vercel**: `npm run build && vercel --prod`
+- **Netlify**: Connect repo, build command `npm run build`, publish `dist/`
+- **GitHub Pages**: Build and push `dist/` to `gh-pages` branch
+- **Cloudflare Pages**: Connect repo, build command `npm run build`, output `dist/`
+
+### Sync Server (Optional)
+
+Deploy `server/sync-server.mjs` to:
+
+- **Fly.io**: See [DESIGN.md](./DESIGN.md#production-deployment) for instructions
+- **Railway**: Connect repo, start command `node server/sync-server.mjs`
+- **Managed Providers**: Use [Liveblocks](https://liveblocks.io/) or [PartyKit](https://www.partykit.io/)
+
+## Usage
+
+### Adding Time
+
+1. Click "+ Add Time" on a child's card
+2. Choose quick increment (15/30/45/60 min) or enter custom time
+3. Optionally add a reason (e.g., "Did chores")
+4. Click "Add Time"
+
+### Starting/Stopping Sessions
+
+1. Click "Start" to begin a media session
+2. Time bank decrements in real-time
+3. Click "Stop" to end the session
+4. View session details in Activity Log
+
+### Exporting Logs
+
+1. Scroll to Activity Log section
+2. Click "📊 CSV" or "📦 JSON" to download logs
+
+## Configuration
+
+Sync settings are stored in localStorage:
+
+- `sync-enabled`: Enable/disable sync (`"true"` or `"false"`)
+- `sync-url`: WebSocket server URL (default: `ws://localhost:1234`)
+- `sync-room`: Family room ID for sync group
+
+## Contributing
+
+See [DESIGN.md](./DESIGN.md) for implementation phases and architecture details.
+
+## License
 
 ISC
 
-## 👨‍💻 Development
+## Support
 
-This project follows the design document in `DESIGN.md`. See the document for complete architecture details, data flow diagrams, and implementation phases.
-
----
-
-**Phase 1 Status**: ✅ Complete
-**Last Updated**: 2025-12-03
+For issues or questions, please check [DESIGN.md](./DESIGN.md) or open an issue on GitHub.

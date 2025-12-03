@@ -1,6 +1,7 @@
 // Yjs CRDT Document Setup
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { WebsocketProvider } from 'y-websocket';
 import type { Child, Session, LogEntry } from '../types';
 
 // Create the Yjs document
@@ -13,6 +14,90 @@ export const yLogs = ydoc.getArray<LogEntry>('logs');
 
 // Initialize IndexedDB persistence
 export const indexeddbProvider = new IndexeddbPersistence('media-tracker', ydoc);
+
+// WebSocket sync provider (optional, initialized later)
+export let websocketProvider: WebsocketProvider | null = null;
+
+// Utility: Generate UUID v4
+export const generateId = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+// Generate a random room ID
+const generateRoomId = (): string => {
+  const id = generateId().substring(0, 8);
+  localStorage.setItem('sync-room', id);
+  return id;
+};
+
+// Get sync configuration from localStorage
+export const getSyncConfig = () => {
+  const syncEnabled = localStorage.getItem('sync-enabled') === 'true';
+  const syncUrl = localStorage.getItem('sync-url') || 'ws://localhost:1234';
+  const roomId = localStorage.getItem('sync-room') || generateRoomId();
+  return { syncEnabled, syncUrl, roomId };
+};
+
+// Initialize WebSocket sync
+export const initializeSync = () => {
+  const { syncEnabled, syncUrl, roomId } = getSyncConfig();
+
+  if (!syncEnabled || websocketProvider) {
+    return websocketProvider;
+  }
+
+  try {
+    websocketProvider = new WebsocketProvider(syncUrl, roomId, ydoc, {
+      connect: true,
+      awareness: undefined, // We don't need awareness for this app
+    });
+
+    websocketProvider.on('status', ({ status }: { status: string }) => {
+      console.log('🔄 Sync status:', status);
+      // Dispatch custom event for UI to listen to
+      window.dispatchEvent(new CustomEvent('sync-status', { detail: { status } }));
+    });
+
+    websocketProvider.on('sync', (synced: boolean) => {
+      console.log(synced ? '✅ Synced with server' : '⏳ Syncing...');
+      window.dispatchEvent(new CustomEvent('sync-change', { detail: { synced } }));
+    });
+
+    console.log(`✅ Sync enabled for room: ${roomId}`);
+    return websocketProvider;
+  } catch (error) {
+    console.error('Failed to initialize sync:', error);
+    return null;
+  }
+};
+
+// Disconnect WebSocket sync
+export const disconnectSync = () => {
+  if (websocketProvider) {
+    websocketProvider.disconnect();
+    websocketProvider.destroy();
+    websocketProvider = null;
+    console.log('🔌 Sync disconnected');
+  }
+};
+
+// Enable sync with optional custom URL
+export const enableSync = (syncUrl?: string, roomId?: string) => {
+  localStorage.setItem('sync-enabled', 'true');
+  if (syncUrl) localStorage.setItem('sync-url', syncUrl);
+  if (roomId) localStorage.setItem('sync-room', roomId);
+  return initializeSync();
+};
+
+// Disable sync
+export const disableSync = () => {
+  localStorage.setItem('sync-enabled', 'false');
+  disconnectSync();
+};
 
 // Wait for initial sync from IndexedDB
 export const waitForSync = (): Promise<void> => {
@@ -60,15 +145,6 @@ export const initializeHardcodedChildren = () => {
 
     console.log('✅ Initialized hardcoded children');
   }
-};
-
-// Utility: Generate UUID v4
-export const generateId = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
 };
 
 // Utility: Format seconds to HH:MM:SS

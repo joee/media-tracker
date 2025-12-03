@@ -7,6 +7,7 @@ import {
   generateId,
   initializeHardcodedChildren,
   waitForSync,
+  initializeSync,
 } from '../lib/yjs';
 import type { Child, Session, LogEntry, AppState } from '../types';
 
@@ -58,6 +59,10 @@ export const useStore = create<StoreState>()((set, get) => {
       await waitForSync();
       initializeHardcodedChildren();
       syncFromCRDT();
+
+      // Initialize WebSocket sync if enabled
+      initializeSync();
+
       set({ isLoading: false });
     },
 

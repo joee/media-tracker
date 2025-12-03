@@ -22,12 +22,80 @@ export default function ActivityLog() {
     return labels[type] || type;
   };
 
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Timestamp', 'Date', 'Child', 'Type', 'Delta (seconds)', 'Previous Balance', 'New Balance', 'Reason'];
+
+    const rows = [...logs].reverse().map((log) => {
+      const child = children[log.childId];
+      const childName = child?.name || log.childId;
+      const reason = log.metadata.reason || '';
+
+      return [
+        log.timestamp,
+        formatDate(log.timestamp),
+        childName,
+        log.type,
+        log.deltaSeconds,
+        log.previousBalance,
+        log.newBalance,
+        reason,
+      ].map(val => {
+        // Escape quotes and wrap in quotes if contains comma or quote
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      }).join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadFile(csv, `media-tracker-activity-${timestamp}.csv`, 'text/csv');
+  };
+
+  const exportToJSON = () => {
+    const exportData = [...logs].reverse().map((log) => {
+      const child = children[log.childId];
+      return {
+        id: log.id,
+        timestamp: log.timestamp,
+        date: formatDate(log.timestamp),
+        childId: log.childId,
+        childName: child?.name || log.childId,
+        type: log.type,
+        deltaSeconds: log.deltaSeconds,
+        previousBalance: log.previousBalance,
+        newBalance: log.newBalance,
+        metadata: log.metadata,
+      };
+    });
+
+    const json = JSON.stringify(exportData, null, 2);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    downloadFile(json, `media-tracker-activity-${timestamp}.json`, 'application/json');
+  };
+
   if (recentLogs.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-2 border-gray-200 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Activity Log
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Activity Log
+          </h2>
+        </div>
         <p className="text-gray-500 dark:text-gray-400">No activity yet</p>
       </div>
     );
@@ -35,9 +103,27 @@ export default function ActivityLog() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-2 border-gray-200 dark:border-gray-700">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-        Activity Log
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Activity Log
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToCSV}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            title="Export to CSV"
+          >
+            📊 CSV
+          </button>
+          <button
+            onClick={exportToJSON}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            title="Export to JSON"
+          >
+            📦 JSON
+          </button>
+        </div>
+      </div>
 
       <div className="space-y-3">
         {recentLogs.map((log) => {

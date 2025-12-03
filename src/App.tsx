@@ -3,6 +3,7 @@ import { useStore } from './store/useStore';
 import ChildCard from './components/ChildCard';
 import ActivityLog from './components/ActivityLog';
 import InstallPrompt from './components/InstallPrompt';
+import SyncStatus from './components/SyncStatus';
 
 export default function App() {
   const {
@@ -36,8 +37,11 @@ export default function App() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Kids Media Tracker
             </h1>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              📱 PWA v1.0
+            <div className="flex items-center gap-4">
+              <SyncStatus />
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                📱 PWA v1.0
+              </div>
             </div>
           </div>
         </div>
