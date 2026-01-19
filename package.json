@@ -12,7 +12,10 @@
     "validate": "node scripts/validate.mjs",
     "test:integration": "node scripts/integration-test.mjs",
     "test": "npm run validate && npm run test:integration",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "worker:dev": "cd worker && npm run dev",
+    "worker:deploy": "cd worker && npm run deploy",
+    "worker:install": "cd worker && npm install"
   },
   "repository": {
     "type": "git",

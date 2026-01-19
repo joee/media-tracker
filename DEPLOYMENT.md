@@ -1,57 +1,155 @@
-# NixOS Deployment Guide
+# Deployment Guide
 
-This guide covers deploying the Kids Media Tracker with:
-- **Frontend (PWA)**: Cloudflare Pages (free, global CDN)
-- **Sync Server**: Your NixOS host (self-hosted)
+This guide covers deploying the Kids Media Tracker. Choose your deployment option:
 
-## Architecture Overview
+| Option | Frontend | Sync Server | Cost | Maintenance |
+|--------|----------|-------------|------|-------------|
+| **Cloudflare (Recommended)** | Cloudflare Pages | Durable Objects | Free | Zero |
+| **Self-Hosted** | Cloudflare Pages | Your NixOS Host | Free | Low |
+
+## Option 1: Cloudflare Pages + Durable Objects (Recommended)
+
+Fully managed, zero maintenance, automatic CI/CD on commits to main.
+
+### Architecture
+
+```
+GitHub Push → GitHub Actions → Cloudflare Pages (Frontend)
+                            → Cloudflare Workers (Sync via Durable Objects)
+```
+
+### Prerequisites
+
+1. Cloudflare account (free tier)
+2. GitHub repository
+
+### Step 1: Create Cloudflare API Token
+
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Click "Create Token"
+3. Use "Custom token" template with permissions:
+   - **Account** → Cloudflare Pages → Edit
+   - **Account** → Workers Scripts → Edit
+   - **Zone** → Zone → Read (if using custom domain)
+4. Copy the token
+
+### Step 2: Get Your Cloudflare Account ID
+
+1. Go to https://dash.cloudflare.com
+2. Select any domain (or Workers & Pages)
+3. Copy Account ID from the right sidebar
+
+### Step 3: Configure GitHub Secrets
+
+In your GitHub repository:
+
+1. Go to Settings → Secrets and variables → Actions
+2. Add these secrets:
+   - `CLOUDFLARE_API_TOKEN`: Your API token from Step 1
+   - `CLOUDFLARE_ACCOUNT_ID`: Your account ID from Step 2
+
+### Step 4: (Optional) Configure Sync URL
+
+By default, the frontend will connect to your worker at:
+```
+wss://media-tracker-sync.<account-id>.workers.dev/sync
+```
+
+To customize this (e.g., for a custom domain):
+
+1. Go to Settings → Secrets and variables → Actions → Variables
+2. Add variable: `VITE_SYNC_URL` = `wss://your-custom-domain.com/sync`
+
+### Step 5: Deploy
+
+Push to the `main` branch:
+
+```bash
+git add .
+git commit -m "Deploy to Cloudflare"
+git push origin main
+```
+
+GitHub Actions will automatically:
+1. Deploy the sync worker to Cloudflare Workers
+2. Build and deploy the frontend to Cloudflare Pages
+
+### Step 6: Access Your App
+
+After deployment completes:
+
+- **Frontend**: `https://media-tracker.pages.dev` (or your custom domain)
+- **Sync Worker**: `https://media-tracker-sync.<account-id>.workers.dev`
+
+### Custom Domain Setup
+
+#### For Pages (Frontend)
+
+1. Go to Cloudflare Dashboard → Pages → media-tracker
+2. Custom domains → Add custom domain
+3. Add your domain (e.g., `media.yourdomain.com`)
+
+#### For Workers (Sync)
+
+1. Go to Cloudflare Dashboard → Workers & Pages → media-tracker-sync
+2. Triggers → Custom Domains → Add Custom Domain
+3. Add your domain (e.g., `sync.yourdomain.com`)
+4. Update `VITE_SYNC_URL` in GitHub Actions variables
+
+### Manual Deployment (Without CI/CD)
+
+If you prefer manual deployment:
+
+```bash
+# Install dependencies
+npm install
+cd worker && npm install && cd ..
+
+# Deploy worker (requires CLOUDFLARE_API_TOKEN env var)
+cd worker
+npx wrangler deploy
+
+# Build frontend
+cd ..
+VITE_SYNC_URL=wss://media-tracker-sync.<your-account-id>.workers.dev/sync npm run build
+
+# Deploy frontend
+npx wrangler pages deploy dist --project-name=media-tracker
+```
+
+---
+
+## Option 2: Cloudflare Pages + Self-Hosted NixOS
+
+Run your own sync server for full control.
+
+### Architecture
 
 ```
 Cloudflare Pages (HTTPS) ← Browser → Your NixOS Host (WSS)
      (Static PWA)                      (WebSocket Sync)
 ```
 
-## Prerequisites
+### Prerequisites
 
 1. NixOS host with public IP or domain name
 2. Domain name (for SSL certificate) - e.g., `sync.yourdomain.com`
 3. Cloudflare account (free tier is fine)
 4. GitHub repo connected to Cloudflare Pages
 
-## Part 1: Deploy Frontend to Cloudflare Pages
+### Part A: Deploy Frontend to Cloudflare Pages
 
-### Step 1: Build Configuration
+#### Build Configuration
 
-Cloudflare Pages needs to know where your sync server is. You have two options:
+Set the sync URL via environment variable. Create `.env.production`:
 
-**Option A: Hardcode sync URL (simpler)**
-
-Edit `src/lib/yjs.ts` before deploying:
-
-```typescript
-export const getSyncConfig = () => {
-  const syncEnabled = localStorage.getItem('sync-enabled') === 'true';
-  const syncUrl = localStorage.getItem('sync-url') || 'wss://sync.yourdomain.com'; // Your server
-  const roomId = localStorage.getItem('sync-room') || generateRoomId();
-  return { syncEnabled, syncUrl, roomId };
-};
-```
-
-**Option B: Use environment variable**
-
-Create `.env.production`:
 ```bash
 VITE_SYNC_URL=wss://sync.yourdomain.com
 ```
 
-Then update `src/lib/yjs.ts`:
-```typescript
-const syncUrl = localStorage.getItem('sync-url') ||
-                import.meta.env.VITE_SYNC_URL ||
-                'ws://localhost:1234';
-```
+Or set `VITE_SYNC_URL` in Cloudflare Pages project settings.
 
-### Step 2: Deploy to Cloudflare Pages
+#### Deploy to Cloudflare Pages
 
 1. **Push to GitHub**:
    ```bash
@@ -73,11 +171,10 @@ const syncUrl = localStorage.getItem('sync-url') ||
 3. **Deploy**:
    - Click "Save and Deploy"
    - Your app will be at: `https://your-project.pages.dev`
-   - Custom domain: Add your own domain in Cloudflare Pages settings
 
-## Part 2: Deploy Sync Server to NixOS
+### Part B: Deploy Sync Server to NixOS
 
-### Step 1: Install Server Files
+#### Step 1: Install Server Files
 
 ```bash
 # On your NixOS host
@@ -94,7 +191,7 @@ cd /var/lib/media-tracker
 nix-shell -p nodejs_20 --run "npm ci --production"
 ```
 
-### Step 2: Configure NixOS Service
+#### Step 2: Configure NixOS Service
 
 Add to your `/etc/nixos/configuration.nix`:
 
@@ -102,11 +199,6 @@ Add to your `/etc/nixos/configuration.nix`:
 { config, pkgs, ... }:
 
 {
-  # Import the sync server service
-  imports = [
-    # ... your existing imports
-  ];
-
   # Sync server service
   systemd.services.media-tracker-sync = {
     description = "Kids Media Tracker Sync Server";
@@ -151,13 +243,11 @@ Add to your `/etc/nixos/configuration.nix`:
 }
 ```
 
-### Step 3: SSL Certificate (Required for WSS)
+#### Step 3: SSL Certificate (Required for WSS)
 
 Since Cloudflare Pages uses HTTPS, your sync server MUST use WSS (WebSocket Secure).
 
 **Option A: Use Caddy (Easiest)**
-
-Add to `configuration.nix`:
 
 ```nix
 {
@@ -170,12 +260,9 @@ Add to `configuration.nix`:
     };
   };
 
-  # Open HTTPS port
   networking.firewall.allowedTCPPorts = [ 443 ];
 }
 ```
-
-Caddy automatically gets Let's Encrypt certificates!
 
 **Option B: Use nginx**
 
@@ -210,7 +297,7 @@ Caddy automatically gets Let's Encrypt certificates!
 }
 ```
 
-### Step 4: DNS Configuration
+#### Step 4: DNS Configuration
 
 Point your domain to your NixOS host:
 
@@ -218,9 +305,7 @@ Point your domain to your NixOS host:
 A Record: sync.yourdomain.com → Your.NixOS.Host.IP
 ```
 
-Wait for DNS propagation (usually 5-15 minutes).
-
-### Step 5: Activate Configuration
+#### Step 5: Activate Configuration
 
 ```bash
 # Rebuild NixOS configuration
@@ -229,124 +314,117 @@ sudo nixos-rebuild switch
 # Check service status
 sudo systemctl status media-tracker-sync
 sudo journalctl -u media-tracker-sync -f
-
-# Check if WebSocket is accessible
-curl -i -N -H "Connection: Upgrade" \
-     -H "Upgrade: websocket" \
-     https://sync.yourdomain.com/
 ```
 
-## Part 3: Testing the Setup
+---
 
-### Test from Browser Console
+## Testing the Setup
 
-Visit your Cloudflare Pages deployment and open browser console:
+### Test WebSocket Connection
+
+From browser console:
 
 ```javascript
-// Test WebSocket connection
+// For Cloudflare Workers
+const ws = new WebSocket('wss://media-tracker-sync.<account-id>.workers.dev/sync?room=test');
+
+// For self-hosted
 const ws = new WebSocket('wss://sync.yourdomain.com/?room=test');
-ws.onopen = () => console.log('✅ Connected!');
-ws.onerror = (e) => console.error('❌ Failed:', e);
+
+ws.onopen = () => console.log('Connected!');
+ws.onerror = (e) => console.error('Failed:', e);
 ```
 
 ### Test Sync Between Devices
 
 1. **Device A**:
-   - Open app at `https://your-app.pages.dev`
+   - Open app
    - Click sync indicator → Enable Sync
    - Copy Room ID
 
 2. **Device B**:
    - Open same URL
    - Enable Sync → Paste Room ID
-   - Both should show 🟢 Synced
+   - Both should show Synced status
 
 3. **Test sync**:
    - Add time on Device A
    - Should instantly appear on Device B
 
+---
+
 ## Troubleshooting
 
 ### "Disconnected" Status
 
-**Check 1: Service running?**
+**Check 1: Worker/service running?**
 ```bash
+# For self-hosted
 sudo systemctl status media-tracker-sync
+
+# For Cloudflare, check the dashboard logs
 ```
 
-**Check 2: Port open?**
-```bash
-sudo ss -tlnp | grep 1234
-```
+**Check 2: Correct URL?**
+- Check browser console for WebSocket connection errors
+- Verify `VITE_SYNC_URL` is set correctly
 
-**Check 3: Firewall?**
-```bash
-sudo iptables -L -n | grep 1234
-```
-
-**Check 4: SSL certificate?**
+**Check 3: SSL certificate?**
 ```bash
 curl https://sync.yourdomain.com
 ```
 
 ### Mixed Content Errors
 
-If you see "Mixed Content" errors in browser console:
-- ❌ Problem: Using `ws://` (insecure) from HTTPS page
-- ✅ Solution: Must use `wss://` (secure WebSocket)
+- Problem: Using `ws://` (insecure) from HTTPS page
+- Solution: Must use `wss://` (secure WebSocket)
 
-### CORS Issues
+### GitHub Actions Deployment Fails
 
-The sync server doesn't need CORS (WebSocket protocol doesn't use CORS), but if you see errors:
-- Check that you're connecting to the correct domain
-- Ensure SSL certificate is valid
+1. Check that `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets are set
+2. Verify API token has correct permissions
+3. Check workflow logs in GitHub Actions tab
 
-### Performance
-
-The sync server is very lightweight:
-- **RAM**: ~30-50 MB
-- **CPU**: Minimal (only when syncing)
-- **Bandwidth**: ~1-5 KB per sync event
-
-For a family with 2-3 devices, this will barely use any resources.
-
-## Security Considerations
-
-1. **Room IDs**: Currently not encrypted. Anyone with your Room ID can join.
-   - Keep Room IDs private
-   - Future: Add PIN protection (Phase 5)
-
-2. **SSL**: Required for production. Caddy/nginx handles this automatically.
-
-3. **Firewall**: Only port 443 (HTTPS) needs to be open publicly.
-
-4. **Updates**: The sync server has no database, so updates are just:
-   ```bash
-   # Copy new sync-server.mjs
-   sudo systemctl restart media-tracker-sync
-   ```
+---
 
 ## Cost Analysis
 
-**Cloudflare Pages**: Free
-- Unlimited bandwidth
-- Global CDN
-- Free SSL
-- Automatic deploys from Git
+| Component | Cost |
+|-----------|------|
+| Cloudflare Pages | Free (unlimited bandwidth) |
+| Cloudflare Workers | Free (100k requests/day) |
+| Durable Objects | Free (included in free tier for small usage) |
+| Self-hosted NixOS | $0 (your own hardware) |
 
-**Your NixOS Host**: $0 (self-hosted)
-- Minimal resource usage
-- No recurring costs
-- Full control
+**Total monthly cost**: $0
 
-**Total monthly cost**: $0 🎉
+---
 
-## Alternative: Skip Sync Server Entirely
+## Local Development
+
+```bash
+# Start frontend dev server
+npm run dev
+
+# Start local sync server (separate terminal)
+npm run server
+
+# Or start Cloudflare Worker locally
+npm run worker:dev
+```
+
+---
+
+## Skip Sync Entirely
 
 If you don't need multi-device sync, just deploy to Cloudflare Pages and don't enable sync in the app. It works perfectly as a local-only app!
 
-## Need Help?
+---
 
-- NixOS docs: https://nixos.org/manual/nixos/stable/
-- Caddy docs: https://caddyserver.com/docs/
-- Cloudflare Pages: https://developers.cloudflare.com/pages/
+## Resources
+
+- [Cloudflare Pages Docs](https://developers.cloudflare.com/pages/)
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [Durable Objects Docs](https://developers.cloudflare.com/durable-objects/)
+- [NixOS Manual](https://nixos.org/manual/nixos/stable/)
+- [Caddy Server](https://caddyserver.com/docs/)
