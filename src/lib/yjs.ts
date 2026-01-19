@@ -34,10 +34,14 @@ const generateRoomId = (): string => {
   return id;
 };
 
+// Default sync URL - can be overridden via environment variable at build time
+// For Cloudflare Workers, this will be wss://your-worker.workers.dev/sync
+const DEFAULT_SYNC_URL = import.meta.env.VITE_SYNC_URL || 'ws://localhost:1234';
+
 // Get sync configuration from localStorage
 export const getSyncConfig = () => {
   const syncEnabled = localStorage.getItem('sync-enabled') === 'true';
-  const syncUrl = localStorage.getItem('sync-url') || 'ws://localhost:1234';
+  const syncUrl = localStorage.getItem('sync-url') || DEFAULT_SYNC_URL;
   const roomId = localStorage.getItem('sync-room') || generateRoomId();
   return { syncEnabled, syncUrl, roomId };
 };

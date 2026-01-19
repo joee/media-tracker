@@ -1,0 +1,26 @@
+# Cloudflare Worker configuration for Media Tracker Sync Server
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "media-tracker-sync"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# Durable Objects binding
+[[durable_objects.bindings]]
+name = "SYNC_ROOM"
+class_name = "SyncRoom"
+
+# Durable Object migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["SyncRoom"]
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Production environment (optional overrides)
+[env.production]
+# Add any production-specific settings here
+# vars = { ENVIRONMENT = "production" }
